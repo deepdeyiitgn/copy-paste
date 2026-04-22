@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    
+    <title>Universal Clipboard Downloader | Extract Text, Images & Files Instantly</title>
+    <meta name="title" content="Universal Clipboard Downloader | Extract Text, Images & Files Instantly">
+    <meta name="description" content="A fast, 100% client-side tool to paste and download your clipboard contents including text, images, and files. Secure, private, and built by Deep Dey.">
+    <meta name="keywords" content="clipboard downloader, paste image to file, download clipboard text, mobile clipboard tool, save clipboard image, client-side clipboard, Deep Dey, copy.qlynk.me">
+    <meta name="author" content="Deep Dey">
+    <meta name="robots" content="index, follow">
+    
+    <link rel="canonical" href="https://copy.qlynk.me/" />
+
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://copy.qlynk.me/">
+    <meta property="og:title" content="Universal Clipboard Downloader | Extract Text, Images & Files Instantly">
+    <meta property="og:description" content="A fast, 100% client-side tool to paste and download your clipboard contents including text, images, and files. Secure, private, and built by Deep Dey.">
+    <meta property="og:image" content="https://deepdey.vercel.app/assets/images/myphoto.png">
+
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://copy.qlynk.me/">
+    <meta property="twitter:title" content="Universal Clipboard Downloader | Extract Text, Images & Files Instantly">
+    <meta property="twitter:description" content="A fast, 100% client-side tool to paste and download your clipboard contents including text, images, and files. Secure, private, and built by Deep Dey.">
+    <meta property="twitter:image" content="https://deepdey.vercel.app/assets/images/myphoto.png">
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebApplication",
+          "name": "Universal Clipboard Downloader",
+          "url": "https://copy.qlynk.me/",
+          "description": "Instantly paste and download clipboard contents (images, text, files) directly in your browser without server uploads.",
+          "applicationCategory": "UtilitiesApplication",
+          "operatingSystem": "Any",
+          "author": {
+            "@id": "#developer"
+          }
+        },
+        {
+          "@type": "Person",
+          "@id": "#developer",
+          "name": "Deep Dey",
+          "url": "https://deepdey.vercel.app/",
+          "image": "https://deepdey.vercel.app/assets/images/myphoto.png",
+          "sameAs": [
+            "https://github.com/deepdeyiitgn"
+          ]
+        }
+      ]
+    }
+    </script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4f46e5',
+                        secondary: '#ec4899',
+                        dark: '#0f172a'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .gradient-text {
+            background: linear-gradient(to right, #4f46e5, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .blob {
+            position: absolute; filter: blur(80px); z-index: -1; opacity: 0.4;
+            animation: float 10s infinite ease-in-out alternate;
+        }
+        @keyframes float {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(30px, -50px) scale(1.1); }
+        }
+        
+        /* Toast Notifications */
+        #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 50; display: flex; flex-direction: column; gap: 10px; }
+        .toast { padding: 12px 20px; border-radius: 8px; color: white; font-weight: 500; box-shadow: 0 4px 6px rgba(0,0,0,0.1); opacity: 0; transform: translateY(20px); animation: slideIn 0.3s forwards, fadeOut 0.3s forwards 3s; }
+        .toast.success { background-color: #10b981; }
+        .toast.error { background-color: #ef4444; }
+        @keyframes slideIn { to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeOut { to { opacity: 0; transform: translateY(-10px); } }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Manual Paste Area */
+        #manual-paste-area {
+            min-height: 120px; outline: none; transition: all 0.2s;
+        }
+        #manual-paste-area:focus { border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2); }
+        #manual-paste-area:empty:before { content: attr(data-placeholder); color: #94a3b8; cursor: text; }
+    </style>
+</head>
+<body class="text-slate-800 antialiased relative overflow-x-hidden">
+
+    <div class="blob bg-primary w-96 h-96 rounded-full top-0 left-[-10%]"></div>
+    <div class="blob bg-secondary w-96 h-96 rounded-full bottom-20 right-[-10%]"></div>
+
+    <nav class="glass-panel sticky top-0 z-40 shadow-sm border-b border-slate-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-clipboard-check text-2xl text-primary"></i>
+                    <span class="font-bold text-xl tracking-tight">Qlynk<span class="text-primary">Copy</span></span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <a href="https://github.com/deepdeyiitgn" target="_blank" rel="noopener noreferrer" class="text-slate-500 hover:text-slate-900 transition">
+                        <i class="fa-brands fa-github text-xl"></i>
+                    </a>
+                    <a href="https://deepdey.vercel.app/" target="_blank" rel="noopener noreferrer" class="text-sm font-medium bg-slate-900 text-white px-4 py-2 rounded-lg hover:bg-slate-800 transition shadow-md">
+                        Developer Portfolio
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-20">
+        
+        <div class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-extrabold mb-4 tracking-tight">
+                Instantly Download Your <span class="gradient-text">Clipboard</span>
+            </h1>
+            <p class="text-lg text-slate-600 max-w-2xl mx-auto">
+                Paste any image, text, or file from your clipboard and download it instantly. 100% client-side. No servers. Total privacy.
+            </p>
+        </div>
+
+        <div class="glass-panel rounded-2xl p-6 md:p-10 shadow-xl border border-slate-200 relative overflow-hidden">
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                <button id="btn-read-direct" class="flex flex-col items-center justify-center p-6 bg-white border-2 border-primary border-dashed rounded-xl hover:bg-indigo-50 transition cursor-pointer group">
+                    <i class="fa-solid fa-paste text-3xl text-primary mb-3 group-hover:scale-110 transition-transform"></i>
+                    <span class="font-semibold text-slate-800 text-lg">Direct Paste</span>
+                    <span class="text-xs text-slate-500 mt-1 text-center">Reads latest clipboard (Images/Text)</span>
+                </button>
+
+                <button id="btn-toggle-manual" class="flex flex-col items-center justify-center p-6 bg-white border-2 border-secondary border-dashed rounded-xl hover:bg-pink-50 transition cursor-pointer group">
+                    <i class="fa-regular fa-keyboard text-3xl text-secondary mb-3 group-hover:scale-110 transition-transform"></i>
+                    <span class="font-semibold text-slate-800 text-lg">Open Keyboard</span>
+                    <span class="text-xs text-slate-500 mt-1 text-center">For mobile users & historical clipboard items</span>
+                </button>
+            </div>
+
+            <div id="manual-paste-container" class="hidden mb-8 transition-all duration-300">
+                <div class="flex justify-between items-end mb-2">
+                    <label class="block text-sm font-semibold text-slate-700">Tap below to open keyboard and Paste</label>
+                    <button id="btn-close-manual" class="text-xs text-slate-500 hover:text-slate-800"><i class="fa-solid fa-times"></i> Close</button>
+                </div>
+                <div id="manual-paste-area" contenteditable="true" data-placeholder="Tap here, then paste your image, text, or file..." class="w-full border-2 border-slate-300 rounded-xl p-4 bg-white text-slate-700 text-sm overflow-y-auto"></div>
+                <p class="text-xs text-slate-500 mt-2"><i class="fa-solid fa-info-circle"></i> On mobile, tap inside the box to bring up your keyboard, then use your clipboard manager to paste.</p>
+            </div>
+
+            <div id="preview-container" class="hidden border-t border-slate-200 pt-8 mt-4">
+                <h3 class="text-lg font-semibold mb-4 text-slate-800">Ready to Download</h3>
+                
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col md:flex-row gap-6 items-start md:items-center">
+                    
+                    <div id="visual-preview" class="w-full md:w-32 h-32 bg-slate-200 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0 relative group">
+                        </div>
+
+                    <div class="flex-grow w-full">
+                        <div class="mb-4">
+                            <p class="text-sm text-slate-500 font-medium uppercase tracking-wide" id="preview-type">Type</p>
+                            <input type="text" id="file-name-input" class="w-full mt-1 bg-white border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-primary focus:border-primary block p-2" value="clipboard_export">
+                            <p class="text-xs text-slate-400 mt-1" id="preview-size">Size: Unknown</p>
+                        </div>
+                        
+                        <div class="flex gap-3">
+                            <button id="btn-download" class="flex-1 bg-slate-900 text-white px-4 py-2.5 rounded-lg hover:bg-slate-800 transition font-medium shadow flex justify-center items-center gap-2">
+                                <i class="fa-solid fa-download"></i> Download File
+                            </button>
+                            <button id="btn-clear" class="px-4 py-2.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition border border-red-200" title="Clear">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <section class="mt-20">
+            <h2 class="text-2xl font-bold text-center mb-10">Why Use This Clipboard Tool?</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                    <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center mb-4 text-xl"><i class="fa-solid fa-shield-halved"></i></div>
+                    <h3 class="font-bold text-lg mb-2">100% Privacy</h3>
+                    <p class="text-slate-600 text-sm">Everything happens entirely in your browser. No data, images, or text are ever uploaded to a server.</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                    <div class="w-12 h-12 bg-pink-100 text-pink-600 rounded-lg flex items-center justify-center mb-4 text-xl"><i class="fa-solid fa-bolt"></i></div>
+                    <h3 class="font-bold text-lg mb-2">Lightning Fast</h3>
+                    <p class="text-slate-600 text-sm">Because there are no network requests, extracting your clipboard and saving the file is instantaneous.</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                    <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center mb-4 text-xl"><i class="fa-solid fa-mobile-screen-button"></i></div>
+                    <h3 class="font-bold text-lg mb-2">Mobile Optimized</h3>
+                    <p class="text-slate-600 text-sm">Dedicated keyboard toggle allows mobile users to utilize their built-in clipboard history tools easily.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="mt-20 bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+            <h2 class="text-2xl font-bold mb-6 border-b pb-4">How to Download from Clipboard</h2>
+            <div class="space-y-6">
+                <div class="flex gap-4">
+                    <div class="flex-shrink-0 w-8 h-8 bg-slate-900 text-white rounded-full flex items-center justify-center font-bold">1</div>
+                    <div>
+                        <h4 class="font-bold text-slate-800">Copy your Content</h4>
+                        <p class="text-sm text-slate-600 mt-1">Take a screenshot, copy an image from a website, or copy a block of text to your device's clipboard.</p>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <div class="flex-shrink-0 w-8 h-8 bg-slate-900 text-white rounded-full flex items-center justify-center font-bold">2</div>
+                    <div>
+                        <h4 class="font-bold text-slate-800">Paste it Here</h4>
+                        <p class="text-sm text-slate-600 mt-1">Click the "Direct Paste" button for automatic retrieval. If you are on a phone, click "Open Keyboard", tap the text box, and use your phone's paste function.</p>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <div class="flex-shrink-0 w-8 h-8 bg-slate-900 text-white rounded-full flex items-center justify-center font-bold">3</div>
+                    <div>
+                        <h4 class="font-bold text-slate-800">Download as File</h4>
+                        <p class="text-sm text-slate-600 mt-1">Rename the file if you wish, and click the Download button. The tool will automatically detect if it is an image (PNG/JPG) or a text file (.txt).</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mt-20 glass-panel p-8 rounded-2xl">
+            <div class="flex flex-col md:flex-row items-center gap-8">
+                <img src="https://deepdey.vercel.app/assets/images/myphoto.png" alt="Deep Dey" class="w-32 h-32 rounded-full shadow-lg border-4 border-white object-cover">
+                <div class="text-center md:text-left">
+                    <h2 class="text-2xl font-bold text-slate-800">Created by Deep Dey</h2>
+                    <p class="text-slate-600 mt-2 mb-4">Software Developer & Open Source Contributor. I build tools that prioritize performance, user privacy, and elegant UI design.</p>
+                    <div class="flex flex-wrap justify-center md:justify-start gap-3">
+                        <a href="https://deepdey.vercel.app/" target="_blank" class="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition"><i class="fa-solid fa-globe mr-2"></i>Portfolio</a>
+                        <a href="https://github.com/deepdeyiitgn" target="_blank" class="px-4 py-2 bg-slate-800 text-white rounded-lg text-sm font-medium hover:bg-slate-700 transition"><i class="fa-brands fa-github mr-2"></i>GitHub</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-white border-t border-slate-200 py-8 mt-12">
+        <div class="max-w-4xl mx-auto px-4 text-center text-slate-500 text-sm">
+            <p>&copy; <span id="year"></span> Deep Dey. All rights reserved.</p>
+            <p class="mt-2 text-xs">Developed for <a href="https://copy.qlynk.me/" class="text-primary hover:underline">copy.qlynk.me</a></p>
+        </div>
+    </footer>
+
+    <div id="toast-container"></div>
+
+    <script>
+        document.getElementById('year').textContent = new Date().getFullYear();
+
+        // State Management
+        let currentBlob = null;
+        let currentFileExtension = '';
+        let currentMimeType = '';
+
+        // DOM Elements
+        const btnReadDirect = document.getElementById('btn-read-direct');
+        const btnToggleManual = document.getElementById('btn-toggle-manual');
+        const manualPasteContainer = document.getElementById('manual-paste-container');
+        const manualPasteArea = document.getElementById('manual-paste-area');
+        const btnCloseManual = document.getElementById('btn-close-manual');
+        const previewContainer = document.getElementById('preview-container');
+        const visualPreview = document.getElementById('visual-preview');
+        const previewType = document.getElementById('preview-type');
+        const previewSize = document.getElementById('preview-size');
+        const fileNameInput = document.getElementById('file-name-input');
+        const btnDownload = document.getElementById('btn-download');
+        const btnClear = document.getElementById('btn-clear');
+        const toastContainer = document.getElementById('toast-container');
+
+        // Utility: Show Toast
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `<i class="fa-solid ${type === 'success' ? 'fa-check-circle' : 'fa-circle-exclamation'} mr-2"></i> ${message}`;
+            toastContainer.appendChild(toast);
+            setTimeout(() => { toast.remove(); }, 3500);
+        }
+
+        // Utility: Format Bytes
+        function formatBytes(bytes, decimals = 2) {
+            if (!+bytes) return '0 Bytes';
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+        }
+
+        // Utility: Generate Random String for filenames
+        function generateId() {
+            return Math.random().toString(36).substring(2, 8);
+        }
+
+        // --- Core Logic: Processing Data ---
+        function processBlob(blob, typeDescription) {
+            currentBlob = blob;
+            currentMimeType = blob.type;
+            
+            // Determine Extension
+            if (currentMimeType.includes('image/png')) currentFileExtension = '.png';
+            else if (currentMimeType.includes('image/jpeg')) currentFileExtension = '.jpg';
+            else if (currentMimeType.includes('image/webp')) currentFileExtension = '.webp';
+            else if (currentMimeType.includes('image/gif')) currentFileExtension = '.gif';
+            else if (currentMimeType.includes('text/plain')) currentFileExtension = '.txt';
+            else if (currentMimeType.includes('text/html')) currentFileExtension = '.html';
+            else currentFileExtension = '.bin'; // Fallback
+
+            // Update UI
+            previewType.textContent = typeDescription || currentMimeType;
+            previewSize.textContent = `Size: ${formatBytes(blob.size)}`;
+            fileNameInput.value = `clipboard_${generateId()}`;
+            
+            // Render Preview
+            visualPreview.innerHTML = '';
+            if (currentMimeType.startsWith('image/')) {
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(blob);
+                img.className = 'w-full h-full object-cover';
+                visualPreview.appendChild(img);
+            } else if (currentMimeType.startsWith('text/')) {
+                const icon = document.createElement('i');
+                icon.className = 'fa-solid fa-file-lines text-4xl text-slate-400';
+                visualPreview.appendChild(icon);
+            } else {
+                const icon = document.createElement('i');
+                icon.className = 'fa-solid fa-file text-4xl text-slate-400';
+                visualPreview.appendChild(icon);
+            }
+
+            previewContainer.classList.remove('hidden');
+            manualPasteContainer.classList.add('hidden'); // Auto-close manual area if open
+            showToast('Content successfully captured!');
+        }
+
+        // --- Logic: Direct API Read ---
+        async function handleDirectRead() {
+            try {
+                // Request clipboard read permission
+                const items = await navigator.clipboard.read();
+                
+                for (const item of items) {
+                    // Try getting images first
+                    const imageTypes = item.types.filter(type => type.startsWith('image/'));
+                    if (imageTypes.length > 0) {
+                        const blob = await item.getType(imageTypes[0]);
+                        processBlob(blob, 'Image File');
+                        return;
+                    }
+                    
+                    // Fallback to text
+                    if (item.types.includes('text/plain')) {
+                        const blob = await item.getType('text/plain');
+                        processBlob(blob, 'Text Document');
+                        return;
+                    }
+                }
+                
+                showToast('No readable image or text found in clipboard. Try manual paste.', 'error');
+            } catch (err) {
+                console.error(err);
+                // Standard fallback message for browsers blocking clipboard read without user paste action
+                showToast('Permission denied or feature unsupported. Please use the "Open Keyboard" button to paste manually.', 'error');
+            }
+        }
+
+        // --- Logic: Manual Paste Event ---
+        function handleManualPaste(e) {
+            e.preventDefault(); // Stop actual pasting into the div
+            const clipboardData = e.clipboardData || window.clipboardData;
+            
+            if (!clipboardData) {
+                showToast('No clipboard data available.', 'error');
+                return;
+            }
+
+            // 1. Check for files/images
+            if (clipboardData.files && clipboardData.files.length > 0) {
+                const file = clipboardData.files[0];
+                processBlob(file, 'Pasted File/Image');
+                manualPasteArea.innerHTML = ''; // Clear box
+                return;
+            }
+
+            // 2. Check for text
+            const textData = clipboardData.getData('text/plain');
+            if (textData) {
+                const blob = new Blob([textData], { type: 'text/plain' });
+                processBlob(blob, 'Pasted Text Document');
+                manualPasteArea.innerHTML = ''; // Clear box
+                return;
+            }
+
+            showToast('Could not read pasted content.', 'error');
+        }
+
+        // --- Logic: Download File ---
+        function triggerDownload() {
+            if (!currentBlob) {
+                showToast('Nothing to download!', 'error');
+                return;
+            }
+
+            let finalName = fileNameInput.value.trim();
+            if (!finalName) finalName = 'download';
+            if (!finalName.endsWith(currentFileExtension)) {
+                finalName += currentFileExtension;
+            }
+
+            const url = URL.createObjectURL(currentBlob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = finalName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            // Clean up memory slightly later
+            setTimeout(() => URL.revokeObjectURL(url), 100);
+            showToast(`Downloading ${finalName}...`);
+        }
+
+        // --- Logic: Clear UI ---
+        function clearData() {
+            currentBlob = null;
+            currentFileExtension = '';
+            previewContainer.classList.add('hidden');
+            fileNameInput.value = '';
+            visualPreview.innerHTML = '';
+        }
+
+        // --- Event Listeners ---
+        btnReadDirect.addEventListener('click', handleDirectRead);
+        
+        btnToggleManual.addEventListener('click', () => {
+            manualPasteContainer.classList.remove('hidden');
+            manualPasteArea.focus(); // Immediately focus so mobile keyboard pops up
+        });
+
+        btnCloseManual.addEventListener('click', () => {
+            manualPasteContainer.classList.add('hidden');
+        });
+
+        // The critical paste interceptor for the contenteditable area
+        manualPasteArea.addEventListener('paste', handleManualPaste);
+        
+        // Also allow drag and drop into the manual area
+        manualPasteArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            manualPasteArea.classList.add('bg-indigo-50');
+        });
+        manualPasteArea.addEventListener('dragleave', () => {
+            manualPasteArea.classList.remove('bg-indigo-50');
+        });
+        manualPasteArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            manualPasteArea.classList.remove('bg-indigo-50');
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                processBlob(e.dataTransfer.files[0], 'Dropped File');
+            }
+        });
+
+        btnDownload.addEventListener('click', triggerDownload);
+        btnClear.addEventListener('click', clearData);
+
+        // Global Paste Listener (Capture Ctrl+V / Cmd+V anywhere on page)
+        document.addEventListener('paste', (e) => {
+            // Don't interfere if they are typing in an input field
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+                return; 
+            }
+            handleManualPaste(e);
+        });
+
+    </script>
+</body>
+</html>
